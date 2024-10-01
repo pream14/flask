@@ -20,10 +20,3 @@ This project is a user authentication API built using Flask, Flask-JWT-Extended,
 - Werkzeug
 - CORS
 
-## Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone <repository_url>
-   cd <repository_name>
