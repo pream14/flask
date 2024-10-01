@@ -6,13 +6,20 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 import traceback
 import datetime
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+
 
 app = Flask(__name__)
 CORS(app)
 
-app.config['JWT_SECRET_KEY'] = "starz"
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(days=1)
-app.config['MONGO_URI'] = "mongodb://localhost:27017/dev"
+app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 
 jwt = JWTManager(app)
 mongo = PyMongo(app)
