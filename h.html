@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Signup</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Optional CSS file -->
+</head>
+<body>
+    <h1>User Signup</h1>
+    <form id="signup-form">
+        <label for="name">Name:</label>
+        <input type="text" id="name" required>
+        
+        <label for="dob">Date of Birth:</label>
+        <input type="date" id="dob" required>
+        
+        <label for="age">Age:</label>
+        <input type="number" id="age" required>
+        
+        <label for="nationality">Nationality:</label>
+        <input type="text" id="nationality" required>
+        
+        <label for="phone">Phone:</label>
+        <input type="tel" id="phone" required>
+        
+        <label for="email">Email:</label>
+        <input type="email" id="email" required>
+        
+        <label for="password">Password:</label>
+        <input type="password" id="password" required>
+        
+        <button type="submit">Sign Up</button>
+    </form>
+
+    <div id="signup-message"></div>
+
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const dob = document.getElementById('dob').value;
+            const age = document.getElementById('age').value;
+            const nationality = document.getElementById('nationality').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const response = await fetch('http://localhost:5000/user/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name,
+                    dob,
+                    age,
+                    nationality,
+                    phone,
+                    email,
+                    password
+                })
+            });
+
+            const data = await response.json();
+            document.getElementById('signup-message').innerText = data.message || data.error;
+        });
+    </script>
+</body>
+</html>
