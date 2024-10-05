@@ -19,4 +19,33 @@ This project is a user authentication API built using Flask, Flask-JWT-Extended,
 - MongoDB
 - Werkzeug
 - CORS
+## Endpoints
+
+### 1. User Signup
+- **URL:** `/user/signup`
+- **Method:** `POST`
+- **Request Body:**
+  ```json
+  {
+    "name": "John Doe",
+    "dob": "1990-01-01",
+    "age": 34,
+    "nationality": "American",
+    "phone": "1234567890",
+    "email": "john.doe@example.com",
+    "password": "your_password"
+  }
+
+  
+### 2. User login
+- **URL:** `/user/login`
+- **Method:** `POST`
+- **Request Body:**
+  ```json
+  {
+  "email": "john.doe@example.com",
+  "password": "your_password"
+  }
+
+
 
