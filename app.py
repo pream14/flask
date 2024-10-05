@@ -8,9 +8,11 @@ import traceback
 import datetime
 from dotenv import load_dotenv
 import os
-
+import urllib.parse
 load_dotenv()
 
+
+# Ensure that MONGO_URI is being correctly pulled from the .env file
 
 
 app = Flask(__name__)
@@ -19,7 +21,21 @@ CORS(app)
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(days=1)
-app.config['MONGO_URI'] = os.getenv('MONGO_URI')
+username = os.getenv('MONGO_USERNAME')  # Define MONGO_USERNAME in your .env
+password = os.getenv('MONGO_PASSWORD')  # Define MONGO_PASSWORD in your .env
+
+# Encode the username and password
+encoded_username = urllib.parse.quote_plus(username)
+encoded_password = urllib.parse.quote_plus(password)
+
+# Construct the Mongo URI
+mongo_uri = f"mongodb+srv://{encoded_username}:{encoded_password}@cluster0.vtghi.mongodb.net/dev"
+
+
+app.config['MONGO_URI'] = mongo_uri
+
+print(f"Mongo URI: {app.config['MONGO_URI']}")
+
 
 jwt = JWTManager(app)
 mongo = PyMongo(app)
@@ -63,6 +79,15 @@ def adduser():
         print("Error occurred:", str(e))
         print(traceback.format_exc())
         return error_stack(str(e))
+
+@app.route('/test_db', methods=['GET'])
+def test_db():
+    try:
+        mongo.db.command('ping')  # A simple command to check MongoDB connection
+        return jsonify({'message': 'Database connection is successful'}), 200
+    except Exception as e:
+        return error_stack(str(e))
+
 
 @app.route('/user/login', methods=['POST'])
 def login():
