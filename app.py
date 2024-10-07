@@ -113,8 +113,6 @@ def login():
 def handle_exception(e):
     return error_stack(str(e))
 
-import os
-
 @app.route('/upload-resume', methods=['POST'])
 def upload_resume():
     try:
@@ -122,11 +120,12 @@ def upload_resume():
         full_name = request.form.get('fullName')
         email = request.form.get('email')
         phone = request.form.get('phone')
+        password = request.form.get('password')
         cover_letter = request.form.get('coverLetter')
         resume_file = request.files.get('resume')
-
+        
         # Validate form data
-        if not full_name or not email or not phone or not resume_file:
+        if not full_name or not email or not phone or not resume_file or not password:
             return jsonify({'error': 'Missing required fields'}), 400
 
         # Validate file type (only accept PDFs)
@@ -137,11 +136,17 @@ def upload_resume():
         user = mongo.db.user.find_one({'email': email})
 
         if user:
-            user_id = user['_id']
+            # Validate password
+            if check_password_hash(user['password'], password):
+                user_id = user['_id']
+            else:
+                return jsonify({'error': 'Invalid credentials'}), 401
         else:
             # If user does not exist, create a new user
+            hashed_password = generate_password_hash(password)  # Hash the provided password
             new_user = {
                 'email': email,
+                'password': hashed_password,
                 'full_name': full_name,
                 'phone': phone
             }
@@ -163,8 +168,6 @@ def upload_resume():
         resume_data = {
             'user_id': user_id,
             'full_name': full_name,
-            'email': email,
-            'phone': phone,
             'cover_letter': cover_letter,
             'resume_filename': filename,
             'uploaded_at': datetime.now(timezone.utc)
@@ -176,7 +179,7 @@ def upload_resume():
     except Exception as e:
         print(f"Error occurred: {str(e)}")
         print(traceback.format_exc())
-        return error_stack(str(e))
+        return jsonify({'error': 'An error occurred while uploading the resume'}), 500
 
 @app.route('/resume/<filename>', methods=['GET'])
 def get_resume(filename):
