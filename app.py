@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request,send_from_directory
 from flask_jwt_extended import JWTManager, create_access_token
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
@@ -7,6 +7,9 @@ from flask_cors import CORS
 import traceback
 import datetime
 from dotenv import load_dotenv
+from datetime import datetime, timezone
+from datetime import timedelta  
+
 import os
 import urllib.parse
 load_dotenv()
@@ -20,7 +23,7 @@ CORS(app)
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(days=1)
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
 username = os.getenv('MONGO_USERNAME')  # Define MONGO_USERNAME in your .env
 password = os.getenv('MONGO_PASSWORD')  # Define MONGO_PASSWORD in your .env
 
@@ -109,6 +112,110 @@ def login():
 @app.errorhandler(Exception)
 def handle_exception(e):
     return error_stack(str(e))
+
+import os
+
+@app.route('/upload-resume', methods=['POST'])
+def upload_resume():
+    try:
+        # Get the form data
+        full_name = request.form.get('fullName')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        cover_letter = request.form.get('coverLetter')
+        resume_file = request.files.get('resume')
+
+        # Validate form data
+        if not full_name or not email or not phone or not resume_file:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Validate file type (only accept PDFs)
+        if not resume_file.filename.endswith('.pdf'):
+            return jsonify({'error': 'Only PDF resumes are allowed'}), 400
+
+        # Check if user exists
+        user = mongo.db.user.find_one({'email': email})
+
+        if user:
+            user_id = user['_id']
+        else:
+            # If user does not exist, create a new user
+            new_user = {
+                'email': email,
+                'full_name': full_name,
+                'phone': phone
+            }
+            user_id = mongo.db.user.insert_one(new_user).inserted_id
+
+        # Ensure the uploads directory exists
+        uploads_dir = './uploads'
+        if not os.path.exists(uploads_dir):
+            os.makedirs(uploads_dir)
+
+        # Handle potential duplicate filenames by appending a timestamp
+        filename = f"{str(user_id)}_{int(datetime.now().timestamp())}.pdf"
+        resume_file_path = os.path.join(uploads_dir, filename)
+
+        # Save the resume file
+        resume_file.save(resume_file_path)
+
+        # Save resume data in the 'resume' collection
+        resume_data = {
+            'user_id': user_id,
+            'full_name': full_name,
+            'email': email,
+            'phone': phone,
+            'cover_letter': cover_letter,
+            'resume_filename': filename,
+            'uploaded_at': datetime.now(timezone.utc)
+        }
+        mongo.db.resume.insert_one(resume_data)
+
+        return jsonify({'message': 'Resume uploaded successfully', 'user_id': str(user_id)})
+
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        print(traceback.format_exc())
+        return error_stack(str(e))
+
+@app.route('/resume/<filename>', methods=['GET'])
+def get_resume(filename):
+    try:
+        # Define the upload directory where resumes are stored
+        uploads_dir = './uploads'
+        
+        # Send the requested file from the uploads directory
+        return send_from_directory(uploads_dir, filename, as_attachment=True)
+
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': 'File not found or some other error occurred'}), 404
+
+
+# Route to get the resume filename by user's email
+@app.route('/get-resume-by-email', methods=['GET'])
+def get_resume_by_email():
+    try:
+        email = request.args.get('email')
+
+        # Find the resume associated with the user's email
+        resume_data = mongo.db.resume.find_one({'email': email})
+
+        if not resume_data:
+            return jsonify({'error': 'Resume not found for this email'}), 404
+
+        # Return the filename to be used for downloading
+        filename = resume_data['resume_filename']
+        return jsonify({'filename': filename})
+
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': 'An error occurred'}), 500
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
